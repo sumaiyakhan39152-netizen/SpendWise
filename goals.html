@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpendWise | Goals</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f4f6fb;
+            color: #20243a;
+        }
+
+        header {
+            background: #20243a;
+            color: white;
+            padding: 20px 7%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        header h2 {
+            color: #72e0c0;
+        }
+
+        nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1050px;
+            margin: 35px auto;
+            padding: 0 20px;
+        }
+
+        .heading {
+            margin-bottom: 25px;
+        }
+
+        .heading h1 {
+            font-size: 30px;
+            margin-bottom: 8px;
+        }
+
+        .heading p {
+            color: #777;
+        }
+
+        .form-card, .goal-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px #20243a0d;
+            margin-bottom: 25px;
+        }
+
+        .form-card h2, .goal-card h3 {
+            margin-bottom: 18px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        input {
+            width: 100%;
+            padding: 13px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        button {
+            background: #20243a;
+            color: white;
+            border: none;
+            padding: 13px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        button:hover {
+            background: #343c60;
+        }
+
+        .goal-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .goal-card {
+            margin-bottom: 0;
+        }
+
+        .goal-card h3 {
+            color: #20243a;
+        }
+
+        .amounts {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        .progress {
+            height: 10px;
+            background: #e8eaf0;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #35c9a1;
+            border-radius: 20px;
+        }
+
+        .percent {
+            color: #35a98c;
+            font-weight: bold;
+            margin-top: 12px;
+        }
+
+        .save-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .save-row input {
+            min-width: 0;
+        }
+
+        .save-row button {
+            margin-top: 0;
+            white-space: nowrap;
+        }
+
+        #message {
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        @media(max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h2>SpendWise</h2>
+
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/budget">Budget</a>
+        <a href="/transactions">Transactions</a>
+        <a href="/analytics">Analytics</a>
+        <a href="/goals">Goals</a>
+    </nav>
+</header>
+
+<div class="container">
+
+    <div class="heading">
+        <h1>My Saving Goals 🎯</h1>
+        <p>Plan your savings and turn your goals into reality.</p>
+    </div>
+
+    <div class="form-card">
+        <h2>Create New Goal</h2>
+
+        <div class="form-grid">
+            <input type="text" id="title"
+                   placeholder="Goal name (e.g. New Laptop)">
+
+            <input type="number" id="target"
+                   placeholder="Target amount (₹)" min="1">
+        </div>
+
+        <button onclick="addGoal()">Create Goal</button>
+        <p id="message"></p>
+    </div>
+
+    <h2 style="margin-bottom:18px;">Your Goals</h2>
+
+    <div class="goal-list" id="goalList">
+        <p>Loading your goals...</p>
+    </div>
+
+</div>
+
+<script>
+    async function loadGoals() {
+        const list = document.getElementById("goalList");
+
+        try {
+            const response = await fetch("/api/goals");
+            const goals = await response.json();
+
+            if (!response.ok) {
+                list.innerHTML = "<p>Please login to view your goals.</p>";
+                return;
+            }
+
+            if (goals.length === 0) {
+                list.innerHTML = "<p>No goals yet. Create your first saving goal!</p>";
+                return;
+            }
+
+            list.innerHTML = goals.map(goal => {
+                const target = Number(goal.target);
+                const saved = Number(goal.saved);
+                const percent = target > 0
+                    ? Math.min((saved / target) * 100, 100)
+                    : 0;
+
+                return `
+                    <div class="goal-card">
+                        <h3>${escapeHTML(goal.title)}</h3>
+
+                        <div class="amounts">
+                            <span>Saved: ₹${saved.toFixed(2)}</span>
+                            <span>Target: ₹${target.toFixed(2)}</span>
+                        </div>
+
+                        <div class="progress">
+                            <div class="progress-fill"
+                                 style="width:${percent}%"></div>
+                        </div>
+
+                        <p class="percent">${percent.toFixed(1)}% completed</p>
+
+                        <div class="save-row">
+                            <input type="number"
+                                   id="save-${goal.id}"
+                                   placeholder="Add savings ₹"
+                                   min="1">
+                            <button onclick="addSavings(${goal.id})">
+                                Add
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+        } catch (error) {
+            list.innerHTML = "<p>Unable to load goals. Please try again.</p>";
+        }
+    }
+
+    function escapeHTML(value) {
+        return String(value).replace(/[&<>"']/g, char => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[char]);
+    }
+
+    async function addGoal() {
+        const title = document.getElementById("title").value.trim();
+        const target = Number(document.getElementById("target").value);
+        const message = document.getElementById("message");
+
+        if (!title || !Number.isFinite(target) || target <= 0) {
+            message.textContent = "Please enter a goal name and valid target.";
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/goals", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({title, target})
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                message.textContent = result.error || "Could not create goal.";
+                return;
+            }
+
+            message.textContent = "Goal created successfully!";
+            document.getElementById("title").value = "";
+            document.getElementById("target").value = "";
+
+            loadGoals();
+
+        } catch (error) {
+            message.textContent = "Server connection failed.";
+        }
+    }
+
+    async function addSavings(id) {
+        const input = document.getElementById("save-" + id);
+        const amount = Number(input.value);
+
+        if (!Number.isFinite(amount) || amount <= 0) {
+            alert("Please enter a valid savings amount.");
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/goals/${id}/save`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({amount})
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                alert(result.error || "Could not update savings.");
+                return;
+            }
+
+            loadGoals();
+
+        } catch (error) {
+            alert("Server connection failed.");
+        }
+    }
+
+    loadGoals();
+</script>
+
+</body>
+</html>

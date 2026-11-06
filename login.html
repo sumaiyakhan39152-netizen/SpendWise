@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | SpendWise</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .auth-page {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 25px;
+            background: linear-gradient(135deg, #f5f0ff, #ebe3ff);
+        }
+
+        .auth-card {
+            background: white;
+            width: 100%;
+            max-width: 420px;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 50px rgba(50, 30, 90, .12);
+        }
+
+        .auth-card h1 {
+            text-align: center;
+            margin: 20px 0 10px;
+        }
+
+        .auth-card p {
+            text-align: center;
+            color: #888;
+            margin-bottom: 25px;
+        }
+
+        .auth-card label {
+            display: block;
+            margin: 15px 0 7px;
+            font-weight: 600;
+        }
+
+        .auth-card input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #ddd;
+            border-radius: 9px;
+            font-size: 15px;
+        }
+
+        .auth-card button {
+            width: 100%;
+            margin-top: 24px;
+            padding: 15px;
+            border: none;
+            border-radius: 9px;
+            background: #8054d8;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .auth-card button:disabled {
+            opacity: .6;
+            cursor: wait;
+        }
+
+        .auth-card .bottom-text {
+            margin-top: 22px;
+            font-size: 14px;
+        }
+
+        .auth-card a {
+            color: #8054d8;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        #message {
+            margin-top: 15px;
+            font-size: 14px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="auth-page">
+    <div class="auth-card">
+
+        <div class="logo">Spend<span>Wise.</span></div>
+
+        <h1>Welcome Back!</h1>
+        <p>Login to manage your money smartly.</p>
+
+        <form id="loginForm">
+
+            <label>Email Address</label>
+            <input type="email" id="email"
+                   placeholder="Enter your email" required>
+
+            <label>Password</label>
+            <input type="password" id="password"
+                   placeholder="Enter your password" required>
+
+            <button type="submit" id="loginButton">
+                Login to Account
+            </button>
+
+        </form>
+
+        <div id="message"></div>
+
+        <p class="bottom-text">
+            Don't have an account?
+            <a href="/register">Create Account</a>
+        </p>
+
+        <p class="bottom-text">
+            <a href="/">← Back to Home</a>
+        </p>
+
+    </div>
+</div>
+
+<script>
+const form = document.getElementById("loginForm");
+const message = document.getElementById("message");
+const button = document.getElementById("loginButton");
+
+form.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    button.disabled = true;
+    button.textContent = "Please wait...";
+    message.textContent = "";
+
+    try {
+        const response = await fetch("/api/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({
+                email: document.getElementById("email").value,
+                password: document.getElementById("password").value
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Login failed");
+        }
+
+        message.style.color = "green";
+        message.textContent = "Login successful!";
+
+        window.location.href = "/dashboard";
+
+    } catch (error) {
+        message.style.color = "red";
+        message.textContent = error.message;
+    } finally {
+        button.disabled = false;
+        button.textContent = "Login to Account";
+    }
+});
+</script>
+
+</body>
+</html>

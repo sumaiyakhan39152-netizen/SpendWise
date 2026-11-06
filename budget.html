@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpendWise | Budget</title>
+    <link rel="stylesheet" href="/static/style.css">
+
+    <style>
+        body {
+            background: #f5f3ff;
+            font-family: Arial, sans-serif;
+        }
+
+        .budget-container {
+            max-width: 950px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        h1, h2 { color: #30205f; }
+
+        .budget-card {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            margin: 20px 0;
+            box-shadow: 0 5px 20px #24134d12;
+        }
+
+        input {
+            display: block;
+            width: 100%;
+            max-width: 400px;
+            padding: 13px;
+            margin: 12px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #6844c5;
+            color: white;
+            border: none;
+            padding: 13px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .progress {
+            background: #e9e2ff;
+            height: 14px;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        #progressBar {
+            height: 100%;
+            width: 0%;
+            background: #6844c5;
+            transition: width 0.3s;
+        }
+
+        .nav a {
+            display: inline-block;
+            margin: 8px 12px 8px 0;
+            color: #6844c5;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        #message {
+            margin-top: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="budget-container">
+
+    <h1>My Budget 💰</h1>
+    <p>Plan your monthly spending and stay in control.</p>
+
+    <div class="nav">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/budget">Budget</a>
+        <a href="/transactions">Transactions</a>
+        <a href="/analytics">Analytics</a>
+        <a href="/goals">Goals</a>
+    </div>
+
+    <div class="budget-card">
+
+        <h2>Set Monthly Budget</h2>
+
+        <label for="month">Select Month</label>
+        <input type="month" id="month">
+
+        <label for="amount">Budget Amount (₹)</label>
+        <input type="number" id="amount" min="1"
+               placeholder="Enter your budget">
+
+        <button id="saveBudget">Save Budget</button>
+
+        <p id="message"></p>
+
+    </div>
+
+    <div class="budget-card">
+
+        <h2>Budget Overview</h2>
+
+        <p>Monthly Budget:
+            <strong id="totalBudget">₹0.00</strong>
+        </p>
+
+        <p>Total Spent:
+            <strong id="spent">₹0.00</strong>
+        </p>
+
+        <p>Remaining:
+            <strong id="remaining">₹0.00</strong>
+        </p>
+
+        <div class="progress">
+            <div id="progressBar"></div>
+        </div>
+
+        <p id="usage">0% used</p>
+
+    </div>
+
+</div>
+
+<script>
+
+const monthInput = document.getElementById("month");
+const amountInput = document.getElementById("amount");
+const message = document.getElementById("message");
+
+const today = new Date();
+
+const currentMonth =
+    today.getFullYear() + "-" +
+    String(today.getMonth() + 1).padStart(2, "0");
+
+monthInput.value = currentMonth;
+
+
+function showAmount(id, value) {
+    const number = Number(value);
+
+    document.getElementById(id).textContent =
+        "₹" + (Number.isFinite(number) ? number.toFixed(2) : "0.00");
+}
+
+
+async function loadBudget() {
+
+    const month = monthInput.value;
+
+    if (!month) return;
+
+    try {
+
+        const response = await fetch(
+            "/api/budget?month=" + encodeURIComponent(month)
+        );
+
+        if (response.status === 401) {
+            window.location.href = "/login";
+            return;
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            message.textContent =
+                data.error || "Unable to load budget.";
+            return;
+        }
+
+        const budget = Number(data.budget) || 0;
+        const spent = Number(data.spent) || 0;
+        const remaining = Number(data.remaining) || 0;
+
+        showAmount("totalBudget", budget);
+        showAmount("spent", spent);
+        showAmount("remaining", remaining);
+
+        const percent = budget > 0
+            ? Math.max(0, (spent / budget) * 100)
+            : 0;
+
+        document.getElementById("progressBar").style.width =
+            Math.min(percent, 100) + "%";
+
+        document.getElementById("usage").textContent =
+            percent.toFixed(1) + "% used";
+
+        amountInput.value = budget > 0 ? budget : "";
+
+    } catch (error) {
+
+        message.textContent = "Unable to connect to server.";
+
+    }
+}
+
+
+document.getElementById("saveBudget").addEventListener(
+    "click",
+    async function () {
+
+        const amount = Number(amountInput.value);
+        const month = monthInput.value;
+
+        if (!month || !Number.isFinite(amount) || amount <= 0) {
+
+            message.textContent =
+                "Please enter a valid month and budget amount.";
+
+            return;
+        }
+
+        try {
+
+            const response = await fetch("/api/budget", {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    month: month,
+                    amount: amount
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.status === 401) {
+                window.location.href = "/login";
+                return;
+            }
+
+            if (!response.ok) {
+
+                message.textContent =
+                    data.error || "Could not save budget.";
+
+                return;
+            }
+
+            message.textContent =
+                "Budget saved successfully!";
+
+            await loadBudget();
+
+        } catch (error) {
+
+            message.textContent =
+                "Server connection failed.";
+
+        }
+
+    }
+);
+
+
+monthInput.addEventListener("change", loadBudget);
+
+loadBudget();
+
+</script>
+
+</body>
+</html>

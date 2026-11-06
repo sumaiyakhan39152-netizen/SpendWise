@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpendWise | Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            background: #f5f3ff;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .dashboard {
+            max-width: 1100px;
+            margin: 35px auto;
+            padding: 20px;
+        }
+
+        .welcome {
+            margin-bottom: 25px;
+        }
+
+        .welcome h1 {
+            color: #30205f;
+            margin-bottom: 8px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 18px;
+            margin: 25px 0;
+        }
+
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 5px 20px #24134d12;
+        }
+
+        .card p {
+            color: #777;
+            margin-bottom: 10px;
+        }
+
+        .card h2 {
+            color: #4b2e91;
+            margin: 0;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 25px 0;
+        }
+
+        .actions a {
+            background: #6844c5;
+            color: white;
+            padding: 13px 20px;
+            border-radius: 9px;
+            text-decoration: none;
+        }
+
+        .recent {
+            background: white;
+            padding: 22px;
+            border-radius: 16px;
+            margin-top: 25px;
+        }
+
+        .recent h2 {
+            color: #30205f;
+        }
+
+        #transactionList {
+            color: #777;
+            padding: 0;
+            list-style: none;
+        }
+
+        #logout {
+            background: #e9e2ff;
+            color: #4b2e91;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 9px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        <div class="welcome">
+            <h1>Welcome to SpendWise 👋</h1>
+            <p>Here's your financial overview.</p>
+        </div>
+
+        <div class="cards">
+            <div class="card">
+                <p>Total Balance</p>
+                <h2 id="balance">₹0</h2>
+            </div>
+
+            <div class="card">
+                <p>Total Income</p>
+                <h2 id="income">₹0</h2>
+            </div>
+
+            <div class="card">
+                <p>Total Expenses</p>
+                <h2 id="expense">₹0</h2>
+            </div>
+        </div>
+
+        <h2>Manage Your Money</h2>
+
+        <div class="actions">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/budget">Budget</a>
+            <a href="/analytics">Analytics</a>
+            <a href="/goals">Goals</a>
+        </div>
+
+        <div class="recent">
+            <h2>Recent Transactions</h2>
+            <ul id="transactionList">
+                <li>Loading transactions...</li>
+            </ul>
+        </div>
+
+        <br>
+        <button id="logout">Logout</button>
+    </div>
+
+    <script>
+        async function loadDashboard() {
+            try {
+                const userResponse = await fetch("/api/me");
+
+                if (!userResponse.ok) {
+                    window.location.href = "/login";
+                    return;
+                }
+
+                const user = await userResponse.json();
+                document.querySelector(".welcome h1").textContent =
+                    "Welcome, " + user.name + " 👋";
+
+                const summaryResponse = await fetch("/api/summary");
+                const summary = await summaryResponse.json();
+
+                document.getElementById("balance").textContent =
+                    "₹" + Number(summary.balance).toFixed(2);
+
+                document.getElementById("income").textContent =
+                    "₹" + Number(summary.income).toFixed(2);
+
+                document.getElementById("expense").textContent =
+                    "₹" + Number(summary.expense).toFixed(2);
+
+                const transactionResponse =
+                    await fetch("/api/transactions");
+
+                const transactions = await transactionResponse.json();
+                const list = document.getElementById("transactionList");
+
+                list.innerHTML = "";
+
+                if (transactions.length === 0) {
+                    list.innerHTML = "<li>No transactions yet.</li>";
+                } else {
+                    transactions.slice(0, 5).forEach(item => {
+                        const li = document.createElement("li");
+                        li.textContent =
+                            item.date + " | " + item.category +
+                            " | " + item.type + " | ₹" +
+                            Number(item.amount).toFixed(2);
+                        li.style.padding = "12px 0";
+                        list.appendChild(li);
+                    });
+                }
+
+            } catch (error) {
+                document.getElementById("transactionList").textContent =
+                    "Unable to load dashboard. Please refresh.";
+            }
+        }
+
+        document.getElementById("logout").addEventListener("click",
+            async function () {
+                await fetch("/api/logout", { method: "POST" });
+                window.location.href = "/login";
+            }
+        );
+
+        loadDashboard();
+    </script>
+
+</body>
+</html>

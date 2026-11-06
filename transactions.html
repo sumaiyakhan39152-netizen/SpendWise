@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpendWise | Transactions</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 25px;
+            background: #f5f3ff;
+            font-family: Arial, sans-serif;
+            color: #30205f;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 16px;
+            box-shadow: 0 5px 20px #24134d12;
+        }
+
+        h1, h2 { color: #4b2e91; }
+
+        input, select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 13px;
+            margin: 10px 0 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        button {
+            background: #6844c5;
+            color: white;
+            border: none;
+            padding: 13px 22px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .nav a {
+            display: inline-block;
+            margin: 8px 12px 8px 0;
+            color: #6844c5;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .transaction {
+            padding: 14px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .income { color: green; }
+        .expense { color: #d14b60; }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <h1>Transactions 💳</h1>
+    <p>Track your income and expenses in one place.</p>
+
+    <div class="nav">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/budget">Budget</a>
+        <a href="/transactions">Transactions</a>
+        <a href="/analytics">Analytics</a>
+        <a href="/goals">Goals</a>
+    </div>
+
+    <div class="card">
+        <h2>Add New Transaction</h2>
+
+        <form id="transactionForm">
+
+            <label>Transaction Type</label>
+            <select id="type" required>
+                <option value="expense">Expense</option>
+                <option value="income">Income</option>
+            </select>
+
+            <label>Amount (₹)</label>
+            <input type="number" id="amount"
+                   min="0.01" step="0.01"
+                   placeholder="Enter amount" required>
+
+            <label>Category</label>
+            <select id="category" required>
+                <option value="">Select Category</option>
+                <option>Food</option>
+                <option>Shopping</option>
+                <option>Travel</option>
+                <option>Education</option>
+                <option>Health</option>
+                <option>Salary</option>
+                <option>Business</option>
+                <option>Other</option>
+            </select>
+
+            <label>Description</label>
+            <input type="text" id="description"
+                   placeholder="What was this transaction for?">
+
+            <label>Date</label>
+            <input type="date" id="date" required>
+
+            <button type="submit">Add Transaction</button>
+        </form>
+
+        <p id="message"></p>
+    </div>
+
+    <div class="card">
+        <h2>Transaction History</h2>
+        <div id="transactionList">Loading...</div>
+    </div>
+
+</div>
+
+<script>
+    const dateInput = document.getElementById("date");
+    dateInput.value = new Date().toISOString().split("T")[0];
+
+    async function loadTransactions() {
+        const list = document.getElementById("transactionList");
+
+        try {
+            const response = await fetch("/api/transactions");
+
+            if (response.status === 401) {
+                window.location.href = "/login";
+                return;
+            }
+
+            if (!response.ok) throw new Error();
+
+            const transactions = await response.json();
+            list.innerHTML = "";
+
+            if (transactions.length === 0) {
+                list.textContent = "No transactions added yet.";
+                return;
+            }
+
+            transactions.forEach(item => {
+                const div = document.createElement("div");
+                div.className = "transaction";
+
+                const heading = document.createElement("strong");
+                heading.textContent = item.category + " - " + item.type;
+
+                const details = document.createElement("p");
+                details.textContent =
+                    item.date + " | " + (item.description || "No description");
+
+                const amount = document.createElement("strong");
+                amount.className = item.type;
+                amount.textContent =
+                    (item.type === "income" ? "+" : "-") +
+                    " ₹" + Number(item.amount).toFixed(2);
+
+                div.append(heading, details, amount);
+                list.appendChild(div);
+            });
+
+        } catch (error) {
+            list.textContent = "Unable to load transactions.";
+        }
+    }
+
+    document.getElementById("transactionForm")
+        .addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const data = {
+                type: document.getElementById("type").value,
+                amount: document.getElementById("amount").value,
+                category: document.getElementById("category").value,
+                description: document.getElementById("description").value,
+                date: dateInput.value
+            };
+
+            const message = document.getElementById("message");
+
+            try {
+                const response = await fetch("/api/transactions", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    message.textContent = result.error || "Transaction failed.";
+                    return;
+                }
+
+                message.textContent = "Transaction added successfully!";
+                this.reset();
+                dateInput.value = new Date().toISOString().split("T")[0];
+
+                await loadTransactions();
+
+            } catch (error) {
+                message.textContent = "Server connection failed.";
+            }
+        });
+
+    loadTransactions();
+</script>
+</body>
+</html>
